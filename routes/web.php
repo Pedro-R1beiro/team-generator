@@ -13,6 +13,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/players', [UserController::class, 'index'])->middleware(['auth', 'verified'])->name('players');
+Route::post('/players', [UserController::class, 'store'])->middleware(['auth', 'verified'])->name('players');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
