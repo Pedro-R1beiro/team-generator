@@ -1,8 +1,24 @@
 <x-app-layout>
+    @if (session('success'))
+        <div class="mb-4 w-[90%] bg-green-600 text-white px-4 py-2 rounded-md">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="mb-4 w-[90%] bg-red-600 text-white px-4 py-2 rounded-md">
+            <ul class="list-disc list-inside">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <div x-data="{
         openCreate: false,
         openEdit: false,
+        openConfirmDelete: false,
         search: '',
         users: @js($users),
         selectedUser: null
@@ -39,7 +55,10 @@
                         <!-- BOTÃO EDIT -->
                         <button
                             @click="
-                                selectedUser = JSON.parse(JSON.stringify(user));
+                                selectedUser = {
+                                    ...JSON.parse(JSON.stringify(user)),
+                                    is_admin: Boolean(user.is_admin)
+                                };
                                 openEdit = true;
                             "
                             class="absolute top-1/2 right-[5px] -translate-y-1/2
@@ -93,7 +112,7 @@
             </div>
 
             <!-- EDIT MODAL -->
-            <div x-show="openEdit" @click.outside="openEdit = false"
+            <div x-show="openEdit" @click.outside="openEdit = false, openConfirmDelete = false"
                 x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 scale-95 translate-y-2"
                 x-transition:enter-end="opacity-100 scale-100 -translate-y-1/2"
@@ -101,27 +120,70 @@
                 x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                 x-transition:leave-end="opacity-0 scale-95 translate-y-2"
                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                       bg-stone-200 text-black p-1 rounded-lg shadow-xl z-50 w-[300px]"
+                       bg-stone-200 text-black p-1 rounded-lg shadow-xl z-50 min-w-[min(300px,80vw)]"
                 style="display: none;">
-                <form method="POST" :action="`/players/${selectedUser?.id}`"
-                    class="w-full h-full rounded-lg border-[3px] border-stone-600
-                           p-3 flex flex-col items-center gap-7 relative">
-                    @csrf
-                    @method('PUT')
-
-                    <x-icon name="close" class="absolute top-3 right-3 cursor-pointer hover:text-red-500"
-                        @click="openEdit = false" />
-
-                    <h1>Edit Player</h1>
-
-                    <div class="w-full">
-                        <x-input-label for="edit_name" value="Name" />
-                        <x-text-input id="edit_name" type="text" name="name" class="w-full"
-                            x-model="selectedUser.name" />
-                    </div>
-
-                    <x-primary-button>Update</x-primary-button>
-                </form>
+                <div class="w-full">
+                    <form method="POST" :action="`/players/${selectedUser?.id}`"
+                        class="w-full h-full rounded-lg border-[3px] border-stone-600
+                               p-3 flex flex-col items-center gap-7 relative">
+                        @csrf
+                        @method('PUT')
+    
+                        <x-icon name="close" class="absolute top-3 right-3 cursor-pointer hover:text-red-500"
+                            @click="openEdit = false, openConfirmDelete = false" />
+                        <h1>Edit Player</h1>
+    
+                        <div class="w-full">
+                            <x-input-label for="edit_name" value="Name" />
+                            <x-text-input id="edit_name" type="text" name="name" class="w-full"
+                                x-model="selectedUser.name" />
+                        </div>
+    
+                        <label for="is_admin" class="inline-flex items-center">
+                            <input id="is_admin" type="checkbox"
+                                class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                name="is_admin" x-model="selectedUser.is_admin">
+                            <span class="ms-2 text-sm text-gray-600">{{ __('Admin permission') }}</span>
+                        </label>
+    
+                        <div class="flex w-full justify-around">
+                            <div @click="openConfirmDelete = true"
+                                class='inline-flex items-center px-4 py-2 bg-red-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer'>
+                                Delete
+                            </div>
+    
+                            <x-primary-button>Update</x-primary-button>
+                        </div>
+    
+                    </form>
+                </div>
+                <div x-show="openConfirmDelete"
+                    class="w-full bg-green-600 absolute bottom-[-15px] left-[50%] translate-x-[-50%] translate-y-full bg-stone-200 text-black p-1 rounded-lg shadow-xl z-50"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                    <form method="POST" :action="`/players/${selectedUser?.id}`"
+                        class="rounded-lg border-[3px] border-stone-600 p-3 flex flex-col gap-2 items-center w-full">
+                        @csrf
+                        @method('DELETE')
+                        <div class="flex gap-1 items-center">
+                            <x-icon name="circle-exclamation" class="text-red-800 text-xl" />
+                            <p>Are you sure?</p>
+                        </div>
+                        <p>This process cannot be undone.</p>
+                        <div class="flex w-full justify-around">
+                            <div @click="openConfirmDelete = false"
+                                class='inline-flex items-center px-4 py-2 bg-neutral-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-neutral-500 focus:bg-neutral-500 active:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer'>
+                                Cancel
+                            </div>
+                            <button type="submit"
+                                class='inline-flex items-center px-4 py-2 bg-red-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer'>
+                                Delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
         </div>
