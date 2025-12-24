@@ -13,20 +13,24 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/players', [UserController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'admin'])
     ->name('players');
 
 Route::post('/players', [UserController::class, 'store'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'admin'])
     ->name('players.store');
 
 Route::put('/players/{user}', [UserController::class, 'update'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'admin'])
     ->name('players.update');
 
 Route::delete('/players/{user}', [UserController::class, 'destroy'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'admin'])
     ->name('players.destroy');
+
+Route::get('/teams', function () {
+    return view('admin.teams');
+})->middleware(['auth', 'verified', 'admin'])->name('teams');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

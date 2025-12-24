@@ -7,15 +7,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-use Illuminate\Validation\Rule;
-
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::select('id', 'name', 'is_admin')->get();
+        $query = User::select('id', 'name', 'is_admin')
+            ->orderByDesc('is_admin')
+            ->orderBy('name');
 
-        return view('players', compact('users'));
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%'.$request->search.'%');
+        }
+
+        $users = $query->paginate(18)->withQueryString();
+
+        if ($request->wantsJson()) {
+            return response()->json($users);
+        }
+
+        return view('admin.players', compact('users'));
     }
 
     public function store(Request $request)
@@ -29,6 +39,13 @@ class UserController extends Controller
             ->ascii()
             ->replace(' ', '');
 
+        $email = $simpleStr.'@system.com';
+        $request['email'] = $email;
+
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+        ]);
+
         $password = $simpleStr;
 
         if (strlen($password) < 8) {
@@ -36,8 +53,8 @@ class UserController extends Controller
         }
 
         User::create([
-            'name' => $validated['name'],
-            'email' => $simpleStr.'@system.com',
+            'name' => $request['name'],
+            'email' => $email,
             'password' => Hash::make($password),
         ]);
 
@@ -48,8 +65,6 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
-        dd($request->all());
-
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:3', 'max:255'],
         ]);

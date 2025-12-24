@@ -1,28 +1,29 @@
 <x-app-layout>
-    @if (session('success'))
-        <div class="mb-4 w-[90%] bg-green-600 text-white px-4 py-2 rounded-md">
-            {{ session('success') }}
-        </div>
-    @endif
+    <div x-data="playersPagination({
+        initialUsers: @js($users->items()),
+        currentPage: {{ $users->currentPage() }},
+        lastPage: {{ $users->lastPage() }},
+    })" class="py-16 flex flex-col items-center gap-10 relative">
 
-    @if ($errors->any())
-        <div class="mb-4 w-[90%] bg-red-600 text-white px-4 py-2 rounded-md">
-            <ul class="list-disc list-inside">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+        @if (session('success'))
+            <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 2000)" x-show="show" x-transition.opacity.duration.300ms
+                class="mb-4 w-[90%] bg-green-600 text-white px-4 py-2 rounded-md absolute top-[10px] z-50">
+                {{ session('success') }}
+            </div>
+        @endif
 
-    <div x-data="{
-        openCreate: false,
-        openEdit: false,
-        openConfirmDelete: false,
-        search: '',
-        users: @js($users),
-        selectedUser: null
-    }" class="py-12 flex flex-col items-center gap-10">
+
+        @if ($errors->any())
+            <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 2000)" x-show="show" x-transition.opacity.duration.300ms
+                class="mb-4 w-[90%] bg-red-600 text-white px-4 py-2 rounded-md absolute top-[10px] z-50">
+                <ul class="list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
 
         <!-- TOPO -->
         <div class="flex gap-8">
@@ -33,13 +34,13 @@
 
             <div class="relative">
                 <x-icon name="magnifying-glass" class="absolute left-[5px] top-[50%] -translate-y-1/2" />
-                <x-text-input x-model="search" class="pl-[30px] h-full" placeholder="Search Player" />
+                <x-text-input x-model="search" @input.debounce.400ms="searchUsers" class="pl-[30px] h-full"
+                    placeholder="Search Player" />
             </div>
         </div>
 
         <!-- LISTA -->
-        <div class="relative w-[90%] rounded-2xl h-[50vh]">
-
+        <div class="relative w-[90%] rounded-2xl h-[55vh]">
             <div class="p-6 overflow-y-auto grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-h-full">
 
                 <template x-for="user in users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))"
@@ -48,12 +49,15 @@
                         class="flex p-2 gap-5 items-center rounded-md border-[3px]
                                border-slate-800/60 dark:border-slate-200/60 dark:text-white
                                relative h-fit">
-                        <x-icon name="user" />
+
+                        <x-icon x-show="!user.is_admin" name="user" class="text-lg" />
+
+                        <x-icon x-show="user.is_admin" name="user-gear" class="text-lg text-green-600" />
 
                         <p class="truncate pr-[30px] max-w-full" x-text="user.name"></p>
 
                         <!-- BOTÃO EDIT -->
-                        <button
+                        <button x-show="authUserId !== user.id"
                             @click="
                                 selectedUser = {
                                     ...JSON.parse(JSON.stringify(user)),
@@ -77,6 +81,7 @@
                 </h1>
             </div>
 
+            <!-- EFFECT -->
             <div
                 class=" pointer-events-none absolute inset-0 rounded-2xl border border-transparent /* luz da borda para dentro */ bg-[radial-gradient(ellipse_at_top,rgba(0,0,0,0.3),transparent_0%)] /* dissolve laterais e bottom */ [mask-image:linear-gradient(to_bottom,black_65%,transparent_100%)] /* glow suave */ shadow-[inset_0_1px_12px_rgba(0,0,0,0.6)] ">
             </div>
@@ -128,35 +133,36 @@
                                p-3 flex flex-col items-center gap-7 relative">
                         @csrf
                         @method('PUT')
-    
+
                         <x-icon name="close" class="absolute top-3 right-3 cursor-pointer hover:text-red-500"
                             @click="openEdit = false, openConfirmDelete = false" />
                         <h1>Edit Player</h1>
-    
+
                         <div class="w-full">
                             <x-input-label for="edit_name" value="Name" />
                             <x-text-input id="edit_name" type="text" name="name" class="w-full"
                                 x-model="selectedUser.name" />
                         </div>
-    
+
                         <label for="is_admin" class="inline-flex items-center">
-                            <input id="is_admin" type="checkbox"
+                            <input id="is_admin" type="checkbox" value="1"
                                 class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                name="is_admin" x-model="selectedUser.is_admin">
+                                name="is_admin" :checked="selectedUser.is_admin">
                             <span class="ms-2 text-sm text-gray-600">{{ __('Admin permission') }}</span>
                         </label>
-    
+
                         <div class="flex w-full justify-around">
                             <div @click="openConfirmDelete = true"
                                 class='inline-flex items-center px-4 py-2 bg-red-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer'>
                                 Delete
                             </div>
-    
+
                             <x-primary-button>Update</x-primary-button>
                         </div>
-    
+
                     </form>
                 </div>
+                <!-- CONFIRM DELETE -->
                 <div x-show="openConfirmDelete"
                     class="w-full bg-green-600 absolute bottom-[-15px] left-[50%] translate-x-[-50%] translate-y-full bg-stone-200 text-black p-1 rounded-lg shadow-xl z-50"
                     x-transition:enter="transition ease-out duration-200"
@@ -187,6 +193,79 @@
             </div>
 
         </div>
+        <div class="flex items-center gap-4 mt-4">
+            <button @click="fetchPage(page - 1)" :disabled="page === 1 || loading"
+                class="px-4 py-2 bg-zinc-700 text-white rounded disabled:opacity-40">
+                <x-icon name="backward" />
+            </button>
+
+            <span class="text-sm text-zinc-400">
+                Page <span x-text="page"></span> of <span x-text="lastPage"></span>
+            </span>
+
+            <button @click="fetchPage(page + 1)" :disabled="page === lastPage || loading"
+                class="px-4 py-2 bg-zinc-700 text-white rounded disabled:opacity-40">
+                <x-icon name="forward" />
+
+            </button>
+        </div>
+
     </div>
+
+    <script>
+        function playersPagination({
+            initialUsers,
+            currentPage,
+            lastPage
+        }) {
+            return {
+                /* ====== DADOS ====== */
+                users: initialUsers,
+                page: currentPage,
+                lastPage: lastPage,
+                search: '',
+                loading: false,
+
+                /* ====== ESTADO DOS MODAIS ====== */
+                openCreate: false,
+                openEdit: false,
+                openConfirmDelete: false,
+
+                /* ====== CONTEXTO ====== */
+                authUserId: {{ auth()->id() }},
+                selectedUser: null,
+
+                /* ====== MÉTODOS ====== */
+                async fetchPage(page = 1) {
+                    if (page < 1 || page > this.lastPage) return;
+
+                    this.loading = true;
+
+                    const params = new URLSearchParams({
+                        page,
+                        search: this.search
+                    });
+
+                    const response = await fetch(`/players?${params.toString()}`, {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    this.users = data.data;
+                    this.page = data.current_page;
+                    this.lastPage = data.last_page;
+
+                    this.loading = false;
+                },
+
+                searchUsers() {
+                    this.fetchPage(1);
+                }
+            }
+        }
+    </script>
 
 </x-app-layout>
