@@ -3,7 +3,7 @@
         initialUsers: @js($users->items()),
         currentPage: {{ $users->currentPage() }},
         lastPage: {{ $users->lastPage() }},
-    })" class="py-16 flex flex-col items-center gap-10 relative">
+    })" class="py-16 flex flex-col items-center gap-10 relative w-full">
 
         @if (session('success'))
             <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 2000)" x-show="show" x-transition.opacity.duration.300ms
