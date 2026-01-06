@@ -28,9 +28,9 @@ Route::delete('/players/{user}', [UserController::class, 'destroy'])
     ->middleware(['auth', 'verified', 'admin'])
     ->name('players.destroy');
 
-Route::get('/teams', function () {
-    return view('admin.teams');
-})->middleware(['auth', 'verified', 'admin'])->name('teams');
+Route::get('/teams', [UserController::class, 'index'])
+    ->middleware(['auth', 'verified', 'admin'])
+    ->name('teams');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 class UserController extends Controller
@@ -25,7 +26,12 @@ class UserController extends Controller
             return response()->json($users);
         }
 
-        return view('admin.players', compact('users'));
+        $view = match (Route::currentRouteName()) {
+            'teams' => 'admin.teams',
+            default => 'admin.players',
+        };
+
+        return view($view, compact('users'));
     }
 
     public function store(Request $request)
