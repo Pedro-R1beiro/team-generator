@@ -46,23 +46,25 @@ class UserController extends Controller
             ->replace(' ', '');
 
         $email = $simpleStr.'@system.com';
-        $request['email'] = $email;
-
-        $validated = $request->validate([
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-        ]);
 
         $password = $simpleStr;
-
         if (strlen($password) < 8) {
             $password .= substr('12345678', 0, 8 - strlen($password));
         }
 
-        User::create([
-            'name' => $request['name'],
+        $user = User::create([
+            'name' => $validated['name'],
             'email' => $email,
             'password' => Hash::make($password),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Player added successfully!',
+                'user' => $user,
+            ]);
+        }
 
         return redirect()
             ->route('players')
@@ -75,8 +77,16 @@ class UserController extends Controller
             'name' => ['required', 'string', 'min:3', 'max:255'],
         ]);
 
+        $simpleStr = Str::of($validated['name'])
+            ->lower()
+            ->ascii()
+            ->replace(' ', '');
+
+        $email = $simpleStr.'@system.com';
+
         $user->update([
             'name' => $validated['name'],
+            'email' => $email,
             'is_admin' => $request->boolean('is_admin'),
         ]);
 
