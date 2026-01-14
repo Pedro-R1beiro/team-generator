@@ -110,29 +110,34 @@
 
         {{-- CONTEÚDO PRINCIPAL --}}
         <section class="flex-1 p-6 overflow-y-auto relative">
-            <select x-model="currentTeamSetId" @change="loadTeamSet(currentTeamSetId)"
-                class="px-3 py-2 rounded border text-black">
+            <div class="flex justify-between mb-3">
+                <div class="flex gap-3">
+                    <x-text-input type="date" x-model="playedAt" class="w-[150px]" />
+                    <x-text-input type="text" x-model="teamSetName" placeholder="Name"
+                        class="pl-[10px] w-[150px]" />
+                    <button @click="saveTeams" :disabled="!canSave()"
+                        :class="!canSave() ?
+                            'opacity-40 cursor-not-allowed' :
+                            'hover:scale-105'"
+                        class="bg-green-600 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
+                        <x-icon name="floppy-disk" />
+                    </button>
+                    <button x-show="currentTeamSetId" @click="openConfirmDelete = true"
+                        class="bg-red-600 w-[42px] h-[42px] p-[8px] rounded-md hover:scale-105 text-white">
+                        <x-icon name="trash" />
+                    </button>
+                </div>
+                <select x-model="currentTeamSetId" @change="loadTeamSet(currentTeamSetId)"
+                    class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-[200px]">
 
-                <option value="">Novo time</option>
+                    <option value="">New team</option>
 
-                <template x-for="set in teamSets" :key="set.id">
-                    <option :value="set.id"
-                        x-text="`(${set.played_at ?? set.created_at.slice(0,10)}) - ${set.name}`">
-                    </option>
-                </template>
-            </select>
-            <div class="flex gap-3 mb-4">
-                <input type="date" x-model="playedAt" class="px-3 py-2 rounded border text-black" />
-                <input type="text" x-model="teamSetName" placeholder="Nome do time">
-                <button @click="saveTeams" :disabled="!isDirty"
-                    class="px-4 py-2 bg-green-600 rounded disabled:opacity-40">
-                    💾 Salvar
-                </button>
-
-                <button x-show="currentTeamSetId" @click="openConfirmDelete = true"
-                    class="px-4 py-2 bg-red-600 rounded">
-                    🗑️ Excluir
-                </button>
+                    <template x-for="set in teamSets" :key="set.id">
+                        <option :value="set.id"
+                            x-text="`(${set.played_at ?? set.created_at.slice(0,10)}) - ${set.name}`">
+                        </option>
+                    </template>
+                </select>
             </div>
 
             <div id="teams-area" class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -143,7 +148,7 @@
                    bg-stone-200 dark:bg-zinc-900 dark:text-white">
 
                         <h2 class="font-semibold mb-3">
-                            Time <span x-text="team"></span>
+                            Team <span x-text="team"></span>
                         </h2>
 
                         <!-- jogadores do time -->
@@ -161,7 +166,7 @@
                         </template>
 
                         <p x-show="teams[team].length === 0" class="text-sm dark:text-zinc-400 text-zinc-600">
-                            Arraste jogadores aqui
+                            Drag players here
                         </p>
                     </div>
                 </template>
@@ -226,7 +231,7 @@
 
                     <!-- AÇÕES -->
                     <div class="flex gap-3 justify-center pt-2">
-                        <button type="button" @click="confirmDeleteOpen = false"
+                        <button type="button" @click="openConfirmDelete = false"
                             class='inline-flex items-center px-4 py-2 bg-neutral-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-neutral-500 focus:bg-neutral-500 active:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer'>
                             Cancel
                         </button>
@@ -310,6 +315,8 @@
                 search: '',
                 loading: false,
 
+                loadingTeamSet: false,
+
                 currentTeamSetId: null,
                 isDirty: false,
                 teamSets: [],
@@ -346,6 +353,19 @@
                     C: [],
                     D: [],
                     selected: [],
+                },
+
+                canSave() {
+                    const hasPlayers =
+                        this.teams.A.length ||
+                        this.teams.B.length ||
+                        this.teams.C.length ||
+                        this.teams.D.length;
+
+                    const hasName = this.teamSetName && this.teamSetName.trim().length > 0;
+                    const hasDate = !!this.playedAt;
+
+                    return this.isDirty && hasPlayers && hasName && hasDate;
                 },
 
                 filteredUsers() {
@@ -403,13 +423,22 @@
                     this.loadTeamSets();
 
                     this.$watch('teams', () => {
+                        if (this.loadingTeamSet) return;
                         this.isDirty = true;
                         this.sortTeams();
                     }, {
                         deep: true
                     });
 
-                    this.$watch('playedAt', () => this.isDirty = true);
+                    this.$watch('playedAt', () => {
+                        if (this.loadingTeamSet) return;
+                        this.isDirty = true;
+                    });
+
+                    this.$watch('teamSetName', () => {
+                        if (this.loadingTeamSet) return;
+                        this.isDirty = true;
+                    });
                 },
 
                 async loadTeamSets() {
@@ -543,30 +572,26 @@
                 },
 
                 drop(targetTeam) {
-                    this.isDirty = true;
-
                     if (!this.draggingUser || !this.dragSource) return;
 
                     const user = this.draggingUser;
                     const source = this.dragSource;
 
-                    // 🔁 mesmo lugar → ignora
+                    // ❌ mesmo lugar → ignora completamente
                     if (source === targetTeam) {
                         this.resetDrag();
                         return;
                     }
 
-                    /** 1️⃣ REMOVE DA ORIGEM */
+                    this.isDirty = true; // ✅ AGORA SIM
+
                     if (source === 'sidebar') {
                         this.users = this.users.filter(u => u.id !== user.id);
                     } else {
                         this.teams[source] = this.teams[source].filter(u => u.id !== user.id);
                     }
 
-                    /** 2️⃣ ADICIONA NO DESTINO */
                     this.teams[targetTeam].push(user);
-
-                    /** 3️⃣ CONTROLE DE IDS */
                     this.assignedIds.add(user.id);
 
                     this.resetDrag();
@@ -591,6 +616,9 @@
                 },
 
                 removeFromTeam(team, player) {
+                    const exists = this.teams[team].some(u => u.id === player.id);
+                    if (!exists) return;
+
                     this.isDirty = true;
 
                     this.teams[team] = this.teams[team].filter(u => u.id !== player.id);
@@ -673,15 +701,13 @@
                 },
 
                 async loadTeamSet(id) {
+                    this.loadingTeamSet = true;
+
                     if (!id) {
                         this.resetAll();
-
                         this.playedAt = this.today();
-                        this.teamSetName = ''; // 🆕 novo = vazio
-
-                        this.autoNotFound = [];
-                        this.teams.selected = [];
-
+                        this.teamSetName = '';
+                        this.loadingTeamSet = false;
                         return;
                     }
 
@@ -705,10 +731,11 @@
                         data.played_at.slice(0, 10) :
                         this.today();
 
-                    this.teamSetName = data.name ?? ''; // 🆕 sincroniza nome
+                    this.teamSetName = data.name ?? '';
 
                     this.sortTeams();
-                    this.isDirty = false;
+                    this.isDirty = false; // 🔥 estado limpo
+                    this.loadingTeamSet = false;
                 },
 
                 resetAll() {
@@ -717,17 +744,13 @@
                         B: [],
                         C: [],
                         D: [],
-                        selected: [], // ✅ limpa selected
+                        selected: [],
                     };
 
-                    this.autoNotFound = []; // ✅ limpa não encontrados
+                    this.autoNotFound = [];
                     this.assignedIds.clear();
 
-                    this.currentTeamSetId = null;
                     this.isDirty = false;
-                    this.teamSetName = '';
-
-                    this.playedAt = this.today();
 
                     this.users = this.allUsersPage.filter(
                         u => !this.assignedIds.has(u.id)
@@ -738,9 +761,10 @@
                     if (!this.currentTeamSetId) return;
 
                     this.deleting = true;
+                    const deletingId = this.currentTeamSetId;
 
                     try {
-                        const response = await fetch(`/team-sets/${this.currentTeamSetId}`, {
+                        const response = await fetch(`/team-sets/${deletingId}`, {
                             method: 'DELETE',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
@@ -748,19 +772,15 @@
                             }
                         });
 
-                        if (!response.ok) {
-                            throw new Error('Erro ao excluir');
-                        }
+                        if (!response.ok) throw new Error('Erro ao excluir');
 
-                        // 🔁 remove do select
-                        this.teamSets = this.teamSets.filter(
-                            s => s.id !== this.currentTeamSetId
-                        );
+                        this.teamSets = this.teamSets.filter(s => s.id !== deletingId);
 
-                        // ⬅️ VOLTA PARA "NOVO TIME"
+                        // 🔥 estado base
                         this.currentTeamSetId = '';
+                        this.playedAt = this.today();
+                        this.teamSetName = '';
 
-                        // 🔁 limpa estado
                         this.resetAll();
 
                         this.$dispatch('notify', {

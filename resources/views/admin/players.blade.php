@@ -28,7 +28,7 @@
         <!-- TOPO -->
         <div class="flex gap-8">
             <button @click="openCreate = !openCreate" @click.stop
-                class="bg-green-600 w-[42px] h-[42px] p-[8px] rounded-md hover:scale-105">
+                class="bg-green-600 w-[42px] h-[42px] p-[8px] rounded-md hover:scale-105 text-white">
                 <x-icon name="user-plus" />
             </button>
 
