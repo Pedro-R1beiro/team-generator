@@ -42,7 +42,14 @@ class TeamSetController extends Controller
 
     public function show(TeamSet $teamSet)
     {
-        return $teamSet->load('players.user');
+        return response()->json(
+            $teamSet->load([
+                'players.user',
+                'games' => function ($q) {
+                    $q->orderByDesc('id');
+                },
+            ])
+        );
     }
 
     public function update(Request $request, TeamSet $teamSet)

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AutoTeamsController;
+use App\Http\Controllers\GameController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TeamSetController;
 use App\Http\Controllers\UserController;
@@ -50,6 +51,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/team-sets/{teamSet}', [TeamSetController::class, 'show']);
     Route::put('/team-sets/{teamSet}', [TeamSetController::class, 'update']);
     Route::delete('/team-sets/{teamSet}', [TeamSetController::class, 'destroy']);
+
+    // partidas
+    Route::post('/team-sets/{teamSet}/games', [GameController::class, 'store']);
+    Route::delete('/games/{game}', [GameController::class, 'destroy']);
 });
 
 require __DIR__.'/auth.php';

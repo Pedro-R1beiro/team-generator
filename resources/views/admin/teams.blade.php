@@ -53,14 +53,12 @@
                     </div>
                 </template>
 
-                <!-- ❌ Não existe no banco -->
                 <h1 x-show="search && filteredUsers().length === 0 && searchInAllUsers().length === 0"
                     class="col-span-full text-center text-zinc-400 text-3xl pt-8">
                     No result
                     <x-icon name="face-frown" />
                 </h1>
 
-                <!-- ⚠️ Existe mas já está alocado -->
                 <h1 x-show="search && filteredUsers().length === 0 && searchAssignedInfo()"
                     class="col-span-full text-center text-yellow-500 text-xl pt-8">
                     <span x-text="searchAssignedInfo()"></span>
@@ -113,8 +111,7 @@
             <div class="flex justify-between mb-3">
                 <div class="flex gap-3">
                     <x-text-input type="date" x-model="playedAt" class="w-[150px]" />
-                    <x-text-input type="text" x-model="teamSetName" placeholder="Name"
-                        class="pl-[10px] w-[150px]" />
+                    <x-text-input type="text" x-model="teamSetName" placeholder="Name" class="pl-[10px] w-[150px]" />
                     <button @click="saveTeams" :disabled="!canSave()"
                         :class="!canSave() ?
                             'opacity-40 cursor-not-allowed' :
@@ -122,8 +119,17 @@
                         class="bg-green-600 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
                         <x-icon name="floppy-disk" />
                     </button>
-                    <button x-show="currentTeamSetId" @click="openConfirmDelete = true"
-                        class="bg-red-600 w-[42px] h-[42px] p-[8px] rounded-md hover:scale-105 text-white">
+                    <button @click="openMatches = true" :disabled="!currentTeamSetId"
+                        :class="!currentTeamSetId ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105'"
+                        class="bg-blue-600 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
+                        <x-icon name="trophy" />
+                    </button>
+                    <button @click="openConfirmDelete = true" :disabled="!currentTeamSetId"
+                        :class="!currentTeamSetId
+                            ?
+                            'opacity-40 cursor-not-allowed' :
+                            'hover:scale-105'"
+                        class="bg-red-600 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
                         <x-icon name="trash" />
                     </button>
                 </div>
@@ -147,8 +153,20 @@
                    border-black dark:border-white rounded-lg
                    bg-stone-200 dark:bg-zinc-900 dark:text-white">
 
-                        <h2 class="font-semibold mb-3">
-                            Team <span x-text="team"></span>
+                        <h2 class="font-semibold mb-3 flex items-center justify-between">
+                            <span>
+                                Team <span x-text="team"></span>
+                            </span>
+
+                            <span class="text-sm text-zinc-600 dark:text-zinc-400">
+                                <x-icon name="users"/> <span x-text="teamStats(team).players"></span>
+                                |
+                                <x-icon name="gamepad"/> <span x-text="teamStats(team).games"></span>
+                                |
+                                <x-icon name="trophy"/> <span x-text="teamStats(team).wins"></span>
+                                |
+                                <x-icon name="xmark"/> <span x-text="teamStats(team).losses"></span>
+                            </span>
                         </h2>
 
                         <!-- jogadores do time -->
@@ -243,6 +261,80 @@
                     </div>
                 </div>
             </div>
+
+            <div x-show="openMatches" @click.outside="openMatches = false"
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+            bg-stone-200 text-black p-1 rounded-lg shadow-xl z-50 w-[360px]">
+
+                <div class="rounded-lg border-[3px] border-stone-600 p-3 space-y-3 relative">
+
+                    <x-icon name="close" class="absolute top-3 right-3 cursor-pointer hover:text-red-500"
+                        @click="openMatches = false" />
+
+                    <h2 class="text-center font-semibold">Partidas</h2>
+                    <!-- NOVA PARTIDA -->
+                    <div class="border-t pt-3 space-y-2">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" x-model="useMatchSequence">
+                            Usar sequência automática de jogos
+                        </label>
+                        <h3 class="text-sm font-semibold">Nova partida</h3>
+
+                        <div class="flex gap-2 items-center">
+                            <select x-model="newMatch.team_1" class="flex-1 rounded">
+                                <template x-for="t in ['A','B','C','D']" :key="t">
+                                    <option :value="t" x-text="t"></option>
+                                </template>
+                            </select>
+
+                            <input type="number" min="0" x-model.number="newMatch.score_1"
+                                placeholder="Score" class="w-1/2 rounded text-xs h-[-webkit-fill-available]" />
+
+                            <p>X</p>
+
+                            <select x-model="newMatch.team_2" :key="newMatch.team_1" class="flex-1 rounded">
+                                <template x-for="t in ['B','A','C','D']" :key="t">
+                                    <option :value="t" :disabled="t === newMatch.team_1" x-text="t">
+                                    </option>
+                                </template>
+                            </select>
+
+                            <input type="number" min="0" x-model.number="newMatch.score_2"
+                                placeholder="Score" class="w-1/2 rounded text-xs h-[-webkit-fill-available]" />
+
+                        </div>
+
+                        <select x-model="newMatch.winner" class="w-full rounded">
+                            <option :value="newMatch.team_1" x-text="`Time ${newMatch.team_1}`"></option>
+                            <option :value="newMatch.team_2" x-text="`Time ${newMatch.team_2}`"></option>
+                        </select>
+
+                        <button @click="addMatch" class="w-full bg-green-600 text-white py-1 rounded">
+                            Adicionar partida
+                        </button>
+                    </div>
+                    <!-- LISTA -->
+                    <div class="overflow-y-auto max-h-[40vh] flex flex-col gap-2">
+                        <template x-for="match in matches" :key="match.id">
+                            <div class="flex items-center justify-between bg-white p-2 rounded">
+                                <span>
+                                    <b x-text="match.team_1"></b>
+                                    (<span x-text="match.score_1 ?? '-'"></span>)
+                                    x
+                                    (<span x-text="match.score_2 ?? '-'"></span>)
+                                    <b x-text="match.team_2"></b>
+                                    -
+                                    <span x-text="match.winner ? 'Vencedor: ' + match.winner : 'Sem vencedor'"></span>
+                                </span>
+
+                                <button @click="deleteMatch(match)" class="text-red-600 hover:text-red-800">
+                                    <x-icon name="trash" />
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <aside class="w-80 dark:bg-zinc-900 text-white border-r border-zinc-700 flex flex-col bg-stone-400">
@@ -308,6 +400,39 @@
         }) {
             return {
                 /* ================== STATE ================== */
+                openMatches: false,
+                matches: [],
+
+                teams: {
+                    A: [],
+                    B: [],
+                    C: [],
+                    D: [],
+                    selected: [],
+                },
+
+                useMatchSequence: true,
+
+                matchSequence: [
+                    ['A', 'B'],
+                    ['C', 'D'],
+                    ['C', 'B'],
+                    ['A', 'D'],
+                    ['A', 'C'],
+                    ['B', 'D'],
+                ],
+
+                applyMatchSequence() {
+                    if (!this.useMatchSequence) return;
+
+                    const index = this.matches.length % this.matchSequence.length;
+                    const [team1, team2] = this.matchSequence[index];
+
+                    this.newMatch.team_1 = team1;
+                    this.newMatch.team_2 = team2;
+                    this.newMatch.winner = null;
+                },
+
                 users: initialUsers, // usuários visíveis (sidebar)
                 allUsersPage: initialUsers, // página crua vinda do backend
                 page: currentPage,
@@ -347,12 +472,27 @@
                 // IDs já alocados em algum time
                 assignedIds: new Set(),
 
-                teams: {
-                    A: [],
-                    B: [],
-                    C: [],
-                    D: [],
-                    selected: [],
+                newMatch: {
+                    team_1: 'A',
+                    team_2: 'B',
+                    score_1: null,
+                    score_2: null,
+                    winner: null,
+                },
+
+                async loadMatches(teamSetId) {
+                    if (!teamSetId) {
+                        this.matches = [];
+                        return;
+                    }
+
+                    const res = await fetch(`/team-sets/${teamSetId}`);
+                    const data = await res.json();
+
+                    this.matches = data.games || [];
+
+                    // 🔥 aplica sequência baseada no BD
+                    this.applyMatchSequence();
                 },
 
                 canSave() {
@@ -418,6 +558,29 @@
                     return new Date().toISOString().slice(0, 10);
                 },
 
+                teamStats(team) {
+                    const playersCount = this.teams[team].length;
+
+                    const gamesPlayed = this.matches.filter(
+                        m => m.team_1 === team || m.team_2 === team
+                    );
+
+                    const wins = gamesPlayed.filter(
+                        m => m.winner === team
+                    ).length;
+
+                    const losses = gamesPlayed.filter(
+                        m => m.winner && m.winner !== team
+                    ).length;
+
+                    return {
+                        players: playersCount,
+                        games: gamesPlayed.length,
+                        wins,
+                        losses,
+                    };
+                },
+
                 init() {
                     this.playedAt = this.today();
                     this.loadTeamSets();
@@ -439,6 +602,68 @@
                         if (this.loadingTeamSet) return;
                         this.isDirty = true;
                     });
+
+                    this.$watch('openMatches', async (open) => {
+                        if (!open) return;
+                        if (!this.currentTeamSetId) return;
+
+                        await this.loadMatches(this.currentTeamSetId);
+
+                        this.applyMatchSequence();
+                    });
+
+                    this.$watch('useMatchSequence', (val) => {
+                        if (val) this.applyMatchSequence();
+                    });
+
+                    this.$watch('newMatch.team_1', (value) => {
+                        if (this.newMatch.team_2 === value) {
+                            this.newMatch.team_2 = ['A', 'B', 'C', 'D'].find(t => t !== value);
+                        }
+                        this.newMatch.winner = null;
+                    });
+
+                    this.$watch('newMatch.team_2', () => {
+                        this.newMatch.winner = null;
+                    });
+                },
+
+                async addMatch() {
+                    if (!this.newMatch.team_1 || !this.newMatch.team_2) return;
+
+                    if (!this.newMatch.winner) {
+                        this.newMatch.winner = this.newMatch.team_1;
+                    }
+
+                    const res = await fetch(
+                        `/team-sets/${this.currentTeamSetId}/games`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify(this.newMatch),
+                        }
+                    );
+
+                    const match = await res.json();
+                    this.matches.unshift(match);
+
+                    // reaplica sequência considerando o novo total
+                    this.applyMatchSequence();
+                },
+
+                async deleteMatch(match) {
+                    await fetch(`/games/${match.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                            'Accept': 'application/json',
+                        }
+                    });
+
+                    this.matches = this.matches.filter(m => m.id !== match.id);
                 },
 
                 async loadTeamSets() {
@@ -705,8 +930,12 @@
 
                     if (!id) {
                         this.resetAll();
+
+                        this.matches = [];
+
                         this.playedAt = this.today();
                         this.teamSetName = '';
+
                         this.loadingTeamSet = false;
                         return;
                     }
@@ -727,6 +956,8 @@
 
                     this.currentTeamSetId = id;
 
+                    await this.loadMatches(id);
+
                     this.playedAt = data.played_at ?
                         data.played_at.slice(0, 10) :
                         this.today();
@@ -746,6 +977,8 @@
                         D: [],
                         selected: [],
                     };
+
+                    this.matches = []; // 🔥 GARANTIA TOTAL
 
                     this.autoNotFound = [];
                     this.assignedIds.clear();

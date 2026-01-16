@@ -12,4 +12,9 @@ class TeamSet extends Model
     {
         return $this->hasMany(TeamSetUser::class);
     }
+
+    public function games()
+    {
+        return $this->hasMany(Game::class);
+    }
 }
