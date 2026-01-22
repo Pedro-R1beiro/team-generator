@@ -26,7 +26,7 @@ class AutoTeamsController extends Controller
          * 2️⃣ Carrega usuários uma vez (id + name)
          */
         $users = \App\Models\User::query()
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'score']);
 
         /**
          * Função local de normalização
@@ -60,6 +60,7 @@ class AutoTeamsController extends Controller
                 $found->push([
                     'id' => $matchedUser->id,
                     'name' => $matchedUser->name,
+                    'score' => $matchedUser->score,
                 ]);
             } else {
                 $notFound->push($inputName);

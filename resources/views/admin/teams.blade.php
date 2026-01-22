@@ -43,14 +43,21 @@
                 x-transition>
                 <template x-for="user in filteredUsers()" :key="user.id">
                     <div draggable="true" @dragstart="startDrag(user, 'sidebar')"
-                        class="flex p-2 gap-5 items-center rounded-md border-[3px] text-black
-                                   border-slate-300 dark:border-slate-200/60 dark:text-white
-                                   relative h-fit w-full cursor-grab">
+                        class="flex justify-between items-center p-2 rounded-md border-[3px]
+           border-slate-300 dark:border-slate-200/60
+           text-black dark:text-white cursor-grab">
 
-                        <x-icon name="user" class="text-lg dark:text-white" />
+                        <div class="flex items-center gap-3">
+                            <x-icon name="user" class="text-lg" />
+                            <p class="truncate max-w-[120px]" x-text="user.name"></p>
+                        </div>
 
-                        <p class="truncate pr-[30px] max-w-full" x-text="user.name"></p>
+                        <span class="text-xs font-semibold rounded w-[40px]">
+                            <x-icon name="trophy" class="inline text-yellow-500 mr-1" />
+                            <span x-text="user.score ?? 0"></span>
+                        </span>
                     </div>
+
                 </template>
 
                 <h1 x-show="search && filteredUsers().length === 0 && searchInAllUsers().length === 0"
@@ -121,7 +128,7 @@
                     </button>
                     <button @click="openMatches = true" :disabled="!currentTeamSetId"
                         :class="!currentTeamSetId ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105'"
-                        class="bg-blue-600 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
+                        class="bg-yellow-500 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
                         <x-icon name="trophy" />
                     </button>
                     <button @click="openConfirmDelete = true" :disabled="!currentTeamSetId"
@@ -131,6 +138,24 @@
                             'hover:scale-105'"
                         class="bg-red-600 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
                         <x-icon name="trash" />
+                    </button>
+                    <button @click="toggleStats()"
+                        class="bg-blue-700 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
+                        <template x-if="showStats">
+                            <x-icon name="eye" />
+                        </template>
+                        <template x-if="!showStats">
+                            <x-icon name="eye-slash" />
+                        </template>
+                    </button>
+                    <button @click="sortByAlphabet = !sortByAlphabet; sortTeams()"
+                        class="bg-fuchsia-700 w-[42px] h-[42px] p-[8px] rounded-md text-white transition">
+                        <template x-if="sortByAlphabet">
+                            <x-icon name="arrow-down-a-z" />
+                        </template>
+                        <template x-if="!sortByAlphabet">
+                            <x-icon name="star" />
+                        </template>
                     </button>
                 </div>
                 <select x-model="currentTeamSetId" @change="loadTeamSet(currentTeamSetId)"
@@ -158,14 +183,16 @@
                                 Team <span x-text="team"></span>
                             </span>
 
-                            <span class="text-sm text-zinc-600 dark:text-zinc-400">
-                                <x-icon name="users"/> <span x-text="teamStats(team).players"></span>
+                            <span x-show="showStats" x-transition class="text-sm text-zinc-600 dark:text-zinc-400">
+                                <x-icon name="users" /> <span x-text="teamStats(team).players"></span>
                                 |
-                                <x-icon name="gamepad"/> <span x-text="teamStats(team).games"></span>
+                                <x-icon name="gamepad" /> <span x-text="teamStats(team).games"></span>
                                 |
-                                <x-icon name="trophy"/> <span x-text="teamStats(team).wins"></span>
+                                <x-icon name="trophy" /> <span x-text="teamStats(team).wins"></span>
                                 |
-                                <x-icon name="xmark"/> <span x-text="teamStats(team).losses"></span>
+                                <x-icon name="xmark" /> <span x-text="teamStats(team).losses"></span>
+                                |
+                                <x-icon name="star" /> <span x-text="teamStats(team).score"></span>
                             </span>
                         </h2>
 
@@ -176,10 +203,16 @@
                            bg-zinc-100 dark:bg-zinc-800 rounded cursor-grab">
 
                                 <span x-text="player.name"></span>
+                                <div x-show="showStats" x-transition class="flex gap-1 items-center">
+                                    <span class="text-xs font-semibold rounded w-[40px]">
+                                        <x-icon name="trophy" class="inline text-yellow-500 mr-1" />
+                                        <span x-text="player.score ?? 0"></span>
+                                    </span>
 
-                                <button @click="removeFromTeam(team, player)" class="text-red-500 text-sm">
-                                    <x-icon name="user-minus" />
-                                </button>
+                                    <button @click="removeFromTeam(team, player)" class="text-red-500 text-sm">
+                                        <x-icon name="user-minus" />
+                                    </button>
+                                </div>
                             </div>
                         </template>
 
@@ -360,10 +393,16 @@
                 bg-zinc-100 dark:bg-zinc-800 rounded cursor-grab">
 
                         <span x-text="player.name"></span>
+                        <div class="flex gap-1 items-center">
+                            <span class="text-xs font-semibold rounded w-[40px]">
+                                <x-icon name="trophy" class="inline text-yellow-500 mr-1" />
+                                <span x-text="player.score ?? 0"></span>
+                            </span>
 
-                        <button @click="removeFromTeam('selected', player)" class="text-red-500 text-sm">
-                            <x-icon name="user-minus" />
-                        </button>
+                            <button @click="removeFromTeam('selected', player)" class="text-red-500 text-sm">
+                                <x-icon name="user-minus" />
+                            </button>
+                        </div>
                     </div>
                 </template>
 
@@ -400,6 +439,11 @@
         }) {
             return {
                 /* ================== STATE ================== */
+                showStats: true,
+                toggleStats() {
+                    this.showStats = !this.showStats;
+                },
+
                 openMatches: false,
                 matches: [],
 
@@ -558,8 +602,13 @@
                     return new Date().toISOString().slice(0, 10);
                 },
 
+                teamScore(team) {
+                    return this.teams[team]
+                        .reduce((total, player) => total + (player.score ?? 0), 0);
+                },
+
                 teamStats(team) {
-                    const playersCount = this.teams[team].length;
+                    const players = this.teams[team];
 
                     const gamesPlayed = this.matches.filter(
                         m => m.team_1 === team || m.team_2 === team
@@ -569,15 +618,15 @@
                         m => m.winner === team
                     ).length;
 
-                    const losses = gamesPlayed.filter(
-                        m => m.winner && m.winner !== team
-                    ).length;
-
                     return {
-                        players: playersCount,
+                        players: players.length,
                         games: gamesPlayed.length,
                         wins,
-                        losses,
+                        losses: gamesPlayed.length - wins,
+                        score: players.reduce(
+                            (sum, p) => sum + (p.score ?? 0),
+                            0
+                        ),
                     };
                 },
 
@@ -823,16 +872,39 @@
                     this.sortTeams();
                 },
 
-                sortTeams() {
-                    const sortByName = (a, b) =>
-                        a.name.localeCompare(b.name, 'pt-BR', {
-                            sensitivity: 'base'
-                        });
+                sortByAlphabet: true,
 
-                    // ordena todos os times
-                    ['A', 'B', 'C', 'D', 'selected'].forEach(team => {
-                        this.teams[team].sort(sortByName);
-                    });
+                sortTeams() {
+                    if (this.sortByAlphabet) {
+                        const sortByName = (a, b) =>
+                            a.name.localeCompare(b.name, 'pt-BR', {
+                                sensitivity: 'base'
+                            });
+
+                        // ordena todos os times
+                        ['A', 'B', 'C', 'D', 'selected'].forEach(team => {
+                            this.teams[team].sort(sortByName);
+                        });
+                    } else {
+                        const sortByScore = (a, b) => {
+                            const scoreA = a.score ?? 0;
+                            const scoreB = b.score ?? 0;
+
+                            // 1️⃣ maior pontuação primeiro
+                            if (scoreA !== scoreB) {
+                                return scoreB - scoreA;
+                            }
+
+                            // 2️⃣ desempate por nome (opcional, mas recomendado)
+                            return a.name.localeCompare(b.name, 'pt-BR', {
+                                sensitivity: 'base'
+                            });
+                        };
+
+                        ['A', 'B', 'C', 'D', 'selected'].forEach(team => {
+                            this.teams[team].sort(sortByScore);
+                        });
+                    }
                 },
 
                 resetDrag() {

@@ -12,7 +12,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::select('id', 'name', 'is_admin')
+        $query = User::select('id', 'name', 'is_admin', 'score')
             ->orderByDesc('is_admin')
             ->orderBy('name');
 
